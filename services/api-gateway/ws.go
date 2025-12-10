@@ -74,7 +74,7 @@ func handleDriversWebSocket(w http.ResponseWriter, r *http.Request) {
 		Type: "driver.cmd.register",
 		Data: Driver{
 			Id:             userID,
-			Name:           "Tiago",
+			Name:           "Ayabonga Booi",
 			ProfilePicture: util.GetRandomAvatar(1),
 			CarPlate:       "ABC123",
 			PackageSlug:    packageSlug,
