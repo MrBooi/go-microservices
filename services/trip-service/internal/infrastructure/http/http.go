@@ -27,7 +27,7 @@ func (s *HttpHandler) HandleTripPreview(w http.ResponseWriter, r *http.Request) 
 
 	ctx := r.Context()
 
-	t, err := s.Service.GetRoute(ctx, &reqBody.Pickup, &reqBody.Destination)
+	t, err := s.Service.GetRoute(ctx, &reqBody.Pickup, &reqBody.Destination, true)
 	if err != nil {
 		log.Println(err)
 	}
