@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
-
+	"os"
+	"os/signal"
 	"ride-sharing/shared/env"
+	"syscall"
+	"time"
 )
 
 var (
@@ -22,8 +26,29 @@ func main() {
 		Addr:    httpAddr,
 		Handler: mux,
 	}
+	serverErrors := make(chan error, 1)
 
-	if err := server.ListenAndServe(); err != nil {
-		log.Printf("Error starting HTTP server: %v", err)
+	go func() {
+		log.Printf("HTTP server listening on %s", httpAddr)
+		serverErrors <- server.ListenAndServe()
+	}()
+
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
+
+	select {
+	case err := <-serverErrors:
+		log.Printf("HTTP server Starting error: %v", err)
+	case sig := <-shutdown:
+		log.Printf("Received shutdown signal: %v", sig)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		if err := server.Shutdown(ctx); err != nil {
+			log.Printf("HTTP server Shutdown error: %v", err)
+			server.Close()
+		}
 	}
+
 }
