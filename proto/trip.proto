@@ -50,6 +50,7 @@ message CreateTripRequest {
 
 message CreateTripResponse {
   string tripID = 1;
+  Trip trip =2;
 }
 
 message Trip {
