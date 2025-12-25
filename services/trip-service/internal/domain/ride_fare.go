@@ -1,6 +1,7 @@
 package domain
 
 import (
+	tripTypes "ride-sharing/services/trip-service/pkg/types"
 	pb "ride-sharing/shared/proto/trip"
 	"time"
 
@@ -13,6 +14,7 @@ type RideFareModel struct {
 	PackageSlug       string
 	TotalPriceInCents float64
 	ExpiresAt         time.Time
+	Route             *tripTypes.OsrmApiResponse
 }
 
 func (r *RideFareModel) ToProto() *pb.RideFare {
