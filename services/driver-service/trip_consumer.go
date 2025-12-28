@@ -33,7 +33,7 @@ func (c *tripConsumer) Listen() error {
 			log.Printf("Failed to unmarshal message: %v", err)
 			return err
 		}
-		log.Printf("driver received message: %v", msg)
+		log.Printf("driver received message: %v", payload)
 		return nil
 	})
 }
