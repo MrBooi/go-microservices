@@ -177,6 +177,14 @@ func (r *RabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
+	if err := r.declareAndBindQueue(
+		NotifyPaymentSessionCreatedQueue,
+		[]string{contracts.PaymentEventSessionCreated},
+		TripExchange,
+	); err != nil {
+		return err
+	}
+
 	return nil
 }
 
