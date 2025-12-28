@@ -30,7 +30,6 @@ The project requires a couple tools to run, most of which are part of many devel
 3. Install Minikube from [Minikube's official website](https://minikube.sigs.k8s.io/docs/)
 
 4. Install Tilt from [Tilt's official website](https://tilt.dev/)
-
 5. Install Go on MacOS using Homebrew:
 ```bash
 brew install go
