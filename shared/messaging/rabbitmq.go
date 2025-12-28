@@ -71,4 +71,7 @@ func (r *RabbitMQ) Close() {
 	if r.conn != nil {
 		r.conn.Close()
 	}
+	if r.Channel != nil {
+		r.Channel.Close()
+	}
 }
