@@ -6,13 +6,16 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"ride-sharing/shared/env"
 	"syscall"
 	"time"
+
+	"ride-sharing/shared/env"
+	"ride-sharing/shared/messaging"
 )
 
 var (
-	httpAddr = env.GetString("HTTP_ADDR", ":8081")
+	httpAddr    = env.GetString("HTTP_ADDR", ":8081")
+	rabbitMqURI = env.GetString("RABBITMQ_URI", "amqp://guest:guest@rabbitmq:5672/")
 )
 
 func main() {
@@ -20,20 +23,33 @@ func main() {
 
 	mux := http.NewServeMux()
 
+	// RabbitMQ connection
+	rabbitmq, err := messaging.NewRabbitMQ(rabbitMqURI)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rabbitmq.Close()
+
+	log.Println("Starting RabbitMQ connection")
+
 	mux.HandleFunc("POST /trip/preview", enableCORS(handleTripPreview))
 	mux.HandleFunc("POST /trip/start", enableCORS(handleTripStart))
-
-	mux.HandleFunc("/ws/drivers", handleDriversWebSocket)
-	mux.HandleFunc("/ws/riders", handleRidersWebSocket)
+	mux.HandleFunc("/ws/drivers", func(w http.ResponseWriter, r *http.Request) {
+		handleDriversWebSocket(w, r, rabbitmq)
+	})
+	mux.HandleFunc("/ws/riders", func(w http.ResponseWriter, r *http.Request) {
+		handleRidersWebSocket(w, r, rabbitmq)
+	})
 
 	server := &http.Server{
 		Addr:    httpAddr,
 		Handler: mux,
 	}
+
 	serverErrors := make(chan error, 1)
 
 	go func() {
-		log.Printf("HTTP server listening on %s", httpAddr)
+		log.Printf("Server listening on %s", httpAddr)
 		serverErrors <- server.ListenAndServe()
 	}()
 
@@ -42,17 +58,17 @@ func main() {
 
 	select {
 	case err := <-serverErrors:
-		log.Printf("HTTP server Starting error: %v", err)
+		log.Printf("Error starting the server: %v", err)
+
 	case sig := <-shutdown:
-		log.Printf("Received shutdown signal: %v", sig)
+		log.Printf("Server is shutting down due to %v signal", sig)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		if err := server.Shutdown(ctx); err != nil {
-			log.Printf("HTTP server Shutdown error: %v", err)
+			log.Printf("Could not stop the server gracefully: %v", err)
 			server.Close()
 		}
 	}
-
 }
