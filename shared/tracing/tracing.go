@@ -27,6 +27,7 @@ func InitTracer(cfg Config) (func(context.Context) error, error) {
 	otel.SetTracerProvider(traceProvider)
 
 	// Propagator
+	// sends traces between multiple services
 	prop := newPropagator()
 	otel.SetTextMapPropagator(prop)
 
