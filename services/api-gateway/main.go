@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"ride-sharing/shared/tracing"
 	"syscall"
 	"time"
 
@@ -20,6 +21,22 @@ var (
 
 func main() {
 	log.Println("Starting API Gateway")
+
+	// Initialize Tracing
+	tracerCfg := tracing.Config{
+		ServiceName:    "api-gateway",
+		Environment:    env.GetString("ENVIRONMENT", "development"),
+		JaegerEndpoint: env.GetString("JAEGER_ENDPOINT", "http://jaeger:14268/api/traces"),
+	}
+
+	sh, err := tracing.InitTracer(tracerCfg)
+	if err != nil {
+		log.Fatalf("Failed to initialize the tracer: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	defer sh(ctx)
 
 	mux := http.NewServeMux()
 
