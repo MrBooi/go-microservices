@@ -1,71 +1,81 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
-  name: payment-service
-  labels:
-    app: payment-service
+  name: rabbitmq
 spec:
+  serviceName: "rabbitmq"
   replicas: 1
   selector:
     matchLabels:
-      app: payment-service
+      app: rabbitmq
   template:
     metadata:
       labels:
-        app: payment-service
+        app: rabbitmq
     spec:
       containers:
-        - name: payment-service
-          image: ride-sharing/payment-service
+        - name: rabbitmq
+          image: rabbitmq:3-management
           ports:
-            - containerPort: 9004
+            - containerPort: 5672 # AMQP port
+            - containerPort: 15672 # Management UI port
+          readinessProbe:
+            exec:
+              command: ["rabbitmq-diagnostics", "check_running"]
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 15
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command: ["rabbitmq-diagnostics", "check_running"]
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 15
           resources:
             requests:
-              memory: "64Mi"
-              cpu: "100m"
+              memory: "512Mi"
+              cpu: "250m"
             limits:
-              memory: "128Mi"
-              cpu: "200m"
+              memory: "512Mi"
+              cpu: "250m"
           env:
-            - name: JAEGER_ENDPOINT
-              valueFrom:
-                configMapKeyRef:
-                  key: JAEGER_ENDPOINT
-                  name: app-config
-            - name: STRIPE_SUCCESS_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: app-config
-                  key: STRIPE_SUCCESS_URL
-            - name: STRIPE_CANCEL_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: app-config
-                  key: STRIPE_CANCEL_URL
-
-            # Stripe credentials
-            - name: STRIPE_SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: stripe-secrets
-                  key: stripe-secret-key
-
-            # RabbitMQ credentials
-            - name: RABBITMQ_URI
+            - name: RABBITMQ_DEFAULT_USER
               valueFrom:
                 secretKeyRef:
                   name: rabbitmq-credentials
-                  key: uri
+                  key: username
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
+                  key: password
+            - name: RABBITMQ_MNESIA_BASE
+              value: /var/lib/rabbitmq/mnesia
+          volumeMounts:
+            - name: rabbitmq-data
+              mountPath: /var/lib/rabbitmq
+  volumeClaimTemplates:
+    - metadata:
+        name: rabbitmq-data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 1Gi
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: payment-service
+  name: rabbitmq
 spec:
   selector:
-    app: payment-service
+    app: rabbitmq
   ports:
-    - port: 9004
-      name: grpc
-      targetPort: 9004
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+    - name: management
+      port: 15672
+      targetPort: 15672
   type: ClusterIP
