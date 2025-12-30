@@ -51,8 +51,11 @@ func main() {
 
 	rabbitMqURI := env.GetString("RABBITMQ_URI", "amqp://guest:guest@rabbitmq:5672/")
 
-	inmemRepo := repository.NewInmemRepository()
-	svc := service.NewService(inmemRepo)
+	//inmemRepo := repository.NewInmemRepository()
+	//svc := service.NewService(inmemRepo)
+
+	mongoDBRepo := repository.NewMongoRepository(mongoDb)
+	svc := service.NewService(mongoDBRepo)
 
 	go func() {
 		sigCh := make(chan os.Signal, 1)
